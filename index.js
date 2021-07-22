@@ -8,6 +8,7 @@ const FILE_EXTENSIONS = ['.mkv', '.avi', '.mp4'];
 const FILE_EXTENSIONS_REG = new RegExp(FILE_EXTENSIONS.join('|'));
 const EP_REG_FULL = RegExp(/(e|E)(?<episode>\d{1,})/);
 const EP_REG_IMPLICIT = /(\_|\.)(?<episode>\d{1,})(\_|\.)/;
+const EP_REG_ANY = new RegExp(['DTS', 'bluray'].join('|'));
 const EP_REGS = [EP_REG_FULL, EP_REG_IMPLICIT];
 
 program
@@ -16,6 +17,7 @@ program
   .option('-n, --name <name>')
   .option('-s, --season <season>')
   .option('-p, --preview')
+  .option('--anidbid <anidbid>')
   .parse();
 
 let opts = program.opts();
@@ -27,9 +29,9 @@ if (opts.interactive) {
 }
 
 function runNormally() {
-  const { dir, name, season, preview } = opts;
-  validateOptions(dir, name);
-  renameFilesInFolder(dir, name, season, preview);
+  const { folder, name, season, preview, anidbid } = opts;
+  validateOptions(folder, name);
+  renameFilesInFolder(folder, name, season, preview, anidbid);
 }
 
 async function runInteractively() {
@@ -55,9 +57,9 @@ async function runInteractively() {
   ];
   const response = await prompts(questions);
   const { dir, name, season } = response;
-  const { preview } = opts;
+  const { preview, anidbid } = opts;
   validateOptions(dir, name);
-  renameFilesInFolder(dir, name, season, preview);
+  renameFilesInFolder(dir, name, season, preview, anidbid);
 }
 
 function validateOptions(dir, name) {
@@ -66,7 +68,7 @@ function validateOptions(dir, name) {
   }
 }
 
-function renameFilesInFolder(dir, name, season, preview) {
+function renameFilesInFolder(dir, name, season, preview, anidbid) {
   console.log(`${preview ? 'PREVIEW ' : ''}Running renaming on path:
     ${dir}
     with name:
@@ -81,6 +83,16 @@ function renameFilesInFolder(dir, name, season, preview) {
     const episode = pad(getEpisodeNo(fileName) || index, 2);
     renameFile(fileName, episode, dir, name, season, preview);
   });
+  createAnidbFile(dir, anidbid, preview);
+}
+
+function createAnidbFile(dir, anidbid, preview) {
+  console.log(
+    `${preview ? 'PREVIEW' : ''}Writing anidb.id file with id ${anidbid}`
+  );
+  if (!preview) {
+    fs.writeFileSync(`${dir}/anidb.id`, anidbid);
+  }
 }
 
 function renameFile(currentFileName, episode, dir, name, season, preview) {
@@ -117,7 +129,10 @@ function pad(n, width, z) {
 
 function isVideo(fileName) {
   for (const reg of EP_REGS) {
-    if (reg.test(fileName) && FILE_EXTENSIONS_REG.test(fileName)) {
+    if (
+      (reg.test(fileName) || EP_REG_ANY.test(fileName)) &&
+      FILE_EXTENSIONS_REG.test(fileName)
+    ) {
       return true;
     }
   }
@@ -131,6 +146,7 @@ function getEpisodeNo(fileName) {
       return match.groups.episode;
     }
   }
+  return null;
 }
 
 function getFileExtension(fileName) {
