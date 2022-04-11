@@ -1,157 +1,57 @@
 #!/usr/bin/env node
 
-import fs from 'fs';
-import prompts from 'prompts';
-import { program } from 'commander';
+import fs from "fs";
+import { watch } from "chokidar";
+import { buildFileName, getFileExtension, pad } from "./file-utils";
+import { getEpisodeNo, isVideo, findMatchedAnime } from "./media-utils";
+import { logger } from "./logger";
 
-const FILE_EXTENSIONS = ['.mkv', '.avi', '.mp4'];
-const FILE_EXTENSIONS_REG = new RegExp(FILE_EXTENSIONS.join('|'));
-const EP_REG_FULL = RegExp(/(e|E)(?<episode>\d{1,})/);
-const EP_REG_IMPLICIT = /(\_|\.)(?<episode>\d{1,})(\_|\.)/;
-const EP_REG_ANY = new RegExp(['DTS', 'bluray'].join('|'));
-const EP_REGS = [EP_REG_FULL, EP_REG_IMPLICIT];
+run();
 
-program
-  .option('-i, --interactive')
-  .option('-f, --folder <folder>')
-  .option('-n, --name <name>')
-  .option('-s, --season <season>')
-  .option('-p, --preview')
-  .option('--anidbid <anidbid>')
-  .parse();
-
-let opts = program.opts();
-
-if (opts.interactive) {
-  runInteractively();
-} else {
-  runNormally();
+async function run() {
+  const { appConfigFile, aniConfigFile } = loadConfig();
+  const { inputFolder, outputFolder } = appConfigFile;
+  const animes = aniConfigFile.anime.map((anime) => anime.name);
+  logger.info(`Loaded animes: ${animes}`);
+  logger.info("Watching folder: ", inputFolder);
+  watch(inputFolder, {
+    ignoreInitial: true,
+    awaitWriteFinish: true,
+  }).on("add", (path) => moveFile(path, outputFolder, animes));
 }
 
-function runNormally() {
-  const { folder, name, season, preview, anidbid } = opts;
-  validateOptions(folder, name);
-  renameFilesInFolder(folder, name, season, preview, anidbid);
-}
-
-async function runInteractively() {
-  const questions = [
-    {
-      message: 'Video folder path: ',
-      type: 'text',
-      name: 'dir',
-      initial: opts.folder,
-    },
-    {
-      message: 'Series name',
-      type: 'text',
-      name: 'name',
-      initial: opts.name,
-    },
-    {
-      message: 'Season',
-      type: 'number',
-      name: 'season',
-      initial: opts.season,
-    },
-  ];
-  const response = await prompts(questions);
-  const { dir, name, season } = response;
-  const { preview, anidbid } = opts;
-  validateOptions(dir, name);
-  renameFilesInFolder(dir, name, season, preview, anidbid);
-}
-
-function validateOptions(dir, name) {
-  if (!dir || !name) {
-    program.help();
-  }
-}
-
-function renameFilesInFolder(dir, name, season, preview, anidbid) {
-  console.log(`${preview ? 'PREVIEW ' : ''}Running renaming on path:
-    ${dir}
-    with name:
-    ${name}
-    `);
-
-  const files = fs.readdirSync(dir);
-  files.forEach((fileName, index) => {
-    if (!isVideo(fileName)) {
-      return;
+async function moveFile(path, outputFolder, animes) {
+  logger.debug(`File added: ${path}`);
+  const fileName = path.split("/").pop();
+  if (isVideo(fileName)) {
+    try {
+      const matchedAnimeName = findMatchedAnime(animes, fileName);
+      const episodeRaw = getEpisodeNo(fileName);
+      const episode = pad(episodeRaw, 2);
+      const extension = getFileExtension(fileName);
+      const newFileName = buildFileName(
+        matchedAnimeName,
+        undefined,
+        episode,
+        extension
+      );
+      logger.info(`Matched anime: ${matchedAnimeName}`);
+      const newPath = `${outputFolder}/${newFileName}`;
+      logger.info(`Moving ${path} to ${newPath}`);
+      // fs.renameSync(path, newPath);
+      // createAnidbFile(dir, anidbid, preview);
+    } catch (e) {
+      logger.error(e);
     }
-    const episode = pad(getEpisodeNo(fileName) || index, 2);
-    renameFile(fileName, episode, dir, name, season, preview);
-  });
-  createAnidbFile(dir, anidbid, preview);
-}
-
-function createAnidbFile(dir, anidbid, preview) {
-  console.log(
-    `${preview ? 'PREVIEW' : ''}Writing anidb.id file with id ${anidbid}`
-  );
-  if (!preview) {
-    fs.writeFileSync(`${dir}/anidb.id`, anidbid);
-  }
-}
-
-function renameFile(currentFileName, episode, dir, name, season, preview) {
-  const fileEnding = getFileExtension(currentFileName);
-
-  const filePath = dir + '/' + currentFileName;
-  const newFileName = buildFileName(name, season, episode, fileEnding);
-  const newFilePath = `${dir}/${newFileName}`;
-
-  console.info(`Renaming ${currentFileName} to ${newFileName}`);
-  if (preview) {
-    return;
   } else {
-    fs.renameSync(filePath, newFilePath);
+    logger.debug(`Ignoring, not a video`);
   }
 }
 
-function buildFileName(name, season, episode, fileEnding) {
-  let fileName = `${name} `;
-  if (season && season !== 0) {
-    fileName = `${fileName}S${season}`;
-  }
-  if (episode && episode !== 0) {
-    fileName = `${fileName}E${episode}`;
-  }
-  fileName = `${fileName}${fileEnding}`;
-  return fileName;
-}
-function pad(n, width, z) {
-  z = z || '0';
-  n = n + '';
-  return n.length >= width ? n : new Array(width - n.length + 1).join(z) + n;
-}
-
-function isVideo(fileName) {
-  for (const reg of EP_REGS) {
-    if (
-      (reg.test(fileName) || EP_REG_ANY.test(fileName)) &&
-      FILE_EXTENSIONS_REG.test(fileName)
-    ) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function getEpisodeNo(fileName) {
-  for (const reg of EP_REGS) {
-    let match = reg.exec(fileName);
-    if (match && match.length > 0 && match.groups) {
-      return match.groups.episode;
-    }
-  }
-  return null;
-}
-
-function getFileExtension(fileName) {
-  const match = FILE_EXTENSIONS_REG.exec(fileName);
-  if (match && match.length > 0) {
-    return match[0];
-  }
+function loadConfig() {
+  const appConfigFile = JSON.parse(fs.readFileSync("config.json"));
+  const aniConfigFile = JSON.parse(
+    fs.readFileSync(appConfigFile.aniConfigFile)
+  );
+  return { appConfigFile, aniConfigFile };
 }
