@@ -12,11 +12,6 @@ export const logger = winston.createLogger({
       stream: process.stdout,
     }),
     new winston.transports.File({
-      filename: "error.log",
-      format: winston.format.json(),
-      level: "error",
-    }),
-    new winston.transports.File({
       filename: "debug.log",
       format: winston.format.json(),
       level: "debug",
