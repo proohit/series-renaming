@@ -1,9 +1,9 @@
-import fs from "fs";
 import gunzip from "gunzip-maybe";
 import fetch from "node-fetch";
 import xml from "xml2js";
 import { fileExists, readFile, updateConfig, writeFile } from "./file-utils.js";
 import { logger } from "./logger.js";
+const ANIME_TITLES_FILE_NAME = "anime-titles.xml";
 
 let anidbDb = null;
 
@@ -23,10 +23,10 @@ async function downloadAnidbDb() {
   });
 }
 function saveAnidbDb(anidbXml) {
-  return writeFile("anime-titles.xml", anidbXml);
+  return writeFile(ANIME_TITLES_FILE_NAME, anidbXml);
 }
 async function loadLocalAnidbDb() {
-  return (await readFile("anime-titles.xml")).toString();
+  return (await readFile(ANIME_TITLES_FILE_NAME)).toString();
 }
 
 function parseAnidbDb(anidbXml) {
@@ -70,7 +70,7 @@ const anidbEntryToFriendlyObject = (anidbEntry) => {
  */
 async function shouldDownloadAnidbDb(latestDownloadTime) {
   const REDOWNLOAD_THRESHOLD = 1000 * 60 * 60 * 24 * 3; // 3 days
-  const localDbExists = await fileExists("anime-titles.xml");
+  const localDbExists = await fileExists(ANIME_TITLES_FILE_NAME);
   if (
     !localDbExists ||
     !latestDownloadTime ||
@@ -85,7 +85,7 @@ async function shouldDownloadAnidbDb(latestDownloadTime) {
     `Download date difference: ${downloadTimeDifference}ms. Threshold: ${REDOWNLOAD_THRESHOLD}ms`
   );
 
-  return downloadTimeDifference > REDOWNLOAD_THRESHOLD;
+  return downloadTimeDifference >= REDOWNLOAD_THRESHOLD;
 }
 
 export async function searchAnime(title) {
@@ -96,7 +96,7 @@ export async function searchAnime(title) {
 export async function checkAnidbDb(appConfigFilePath, appConfig) {
   let anidbXml = undefined;
   let updatedConfig = false;
-  if (shouldDownloadAnidbDb(appConfig.latestAnidbDownloadTime)) {
+  if (await shouldDownloadAnidbDb(appConfig.latestAnidbDownloadTime)) {
     logger.debug("Downloading anidb db");
     anidbXml = await downloadAnidbDb();
     logger.debug("Saving anidb db");
