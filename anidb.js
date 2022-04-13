@@ -3,6 +3,7 @@ import fetch from "node-fetch";
 import xml from "xml2js";
 import { fileExists, readFile, updateConfig, writeFile } from "./file-utils.js";
 import { logger } from "./logger.js";
+import { findBestMatch } from "string-similarity";
 const ANIME_TITLES_FILE_NAME = "anime-titles.xml";
 
 let anidbDb = null;
@@ -41,9 +42,7 @@ const getAnimeTitles = (database) => {
 
 const findAnimeByTitle = (database, title) => {
   return database.animetitles.anime.find((anime) =>
-    anime.title
-      .map((animeTitles) => animeTitles["_"].toLowerCase())
-      .includes(title)
+    anime.title.map((animeTitles) => animeTitles["_"]).includes(title)
   );
 };
 
@@ -65,7 +64,7 @@ const anidbEntryToFriendlyObject = (anidbEntry) => {
 
 /**
  *
- * @param {Date} latestDownloadTime
+ * @param {number} latestDownloadTime
  * @returns
  */
 async function shouldDownloadAnidbDb(latestDownloadTime) {
@@ -88,9 +87,18 @@ async function shouldDownloadAnidbDb(latestDownloadTime) {
   return downloadTimeDifference >= REDOWNLOAD_THRESHOLD;
 }
 
-export async function searchAnime(title) {
-  const matchedAnime = findAnimeByTitle(anidbDb, title);
-  console.log(anidbEntryToFriendlyObject(matchedAnime).titles);
+export function searchAnime(title) {
+  const allTitles = getAnimeTitles(anidbDb).flat();
+  const {
+    bestMatch: { rating, target },
+  } = findBestMatch(title, allTitles);
+  logger.debug(`Best match: ${target} with rating ${rating}`);
+  const foundAnime = findAnimeByTitle(anidbDb, target);
+  const matchedAnime = anidbEntryToFriendlyObject(foundAnime);
+  logger.debug(
+    `Matched anime id: ${matchedAnime.aid}, https://anidb.net/anime/${matchedAnime.aid}`
+  );
+  return matchedAnime;
 }
 
 export async function checkAnidbDb(appConfigFilePath, appConfig) {

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { watch } from "chokidar";
-import { checkAnidbDb } from "./anidb.js";
+import { checkAnidbDb, searchAnime } from "./anidb.js";
 import {
   buildFileName,
   createFolder,
@@ -77,7 +77,8 @@ async function handleFileAdded(path) {
         logger.info("Reloading config due to anidb download");
         appConfig = await loadConfig(APP_CONFIG_FILE_PATH);
       }
-      createAnidbFile(dir, anidbid, preview);
+      const { aid } = searchAnime(matchedAnimeName);
+      await createAnidbFile(newParent, aid);
     } catch (e) {
       logger.error(e.message);
     }

@@ -1,5 +1,4 @@
-import stringSimilarity from "string-similarity";
-import { pad } from "./file-utils.js";
+import { pad, writeFile } from "./file-utils.js";
 import { logger } from "./logger.js";
 
 const SEPARATOR = "\\.|\\_";
@@ -37,11 +36,7 @@ export function getSeasonNo(fileName) {
   return undefined;
 }
 
-export function createAnidbFile(dir, anidbid, preview) {
-  logger.info(
-    `${preview ? "PREVIEW" : ""}Writing anidb.id file with id ${anidbid}`
-  );
-  if (!preview) {
-    fs.writeFileSync(`${dir}/anidb.id`, anidbid);
-  }
+export async function createAnidbFile(dir, anidbid) {
+  logger.info(`Writing anidb.id file with id ${anidbid} to ${dir}/anidb.id`);
+  await writeFile(`${dir}/anidb.id`, anidbid);
 }
