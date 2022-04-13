@@ -39,6 +39,30 @@ export function fileExists(filePath) {
   });
 }
 
+export function createFolder(folderPath) {
+  return new Promise((resolve, reject) => {
+    fs.mkdir(folderPath, { recursive: true }, (err) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
+export function moveFile(source, destination) {
+  return new Promise((resolve, reject) => {
+    fs.rename(source, destination, (err) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
 export function loadAndParseJson(filePath) {
   return new Promise((resolve, reject) => {
     fs.readFile(filePath, (err, data) => {

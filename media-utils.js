@@ -1,52 +1,40 @@
 import stringSimilarity from "string-similarity";
+import { pad } from "./file-utils.js";
+import { logger } from "./logger.js";
 
-const EP_REG_FULL = RegExp(/[e|E]?[p|P]?(?<episode>\d{1,})/);
-const SEASON_REG_FULL = RegExp(/[s|S]?(?<season>\d{1,})/);
-const EP_REG_ANY = new RegExp(["DTS", "bluray"].join("|"));
-const EP_REGS = [EP_REG_FULL];
+const SEPARATOR = "\\.|\\_";
+
+const regExps = {
+  season: RegExp(
+    `([sS](eason|taffel)?)[${SEPARATOR}]?(?<season>([0-9]{1,2}))`,
+    "g"
+  ),
+  episode: RegExp(
+    `([fF]olge|[Ee][Pp](isode)?|e|E|f|F)[${SEPARATOR}]?(?<episode>([0-9]{1,2}))`,
+    "g"
+  ),
+  extension: RegExp(`\\.(?<extension>((avi|mkv|mp4)))`),
+};
 
 export function isVideo(fileName) {
-  for (const reg of EP_REGS) {
-    if (
-      (reg.test(fileName) || EP_REG_ANY.test(fileName)) &&
-      FILE_EXTENSIONS_REG.test(fileName)
-    ) {
-      return true;
-    }
-  }
-  return false;
+  return regExps.extension.test(fileName);
 }
 
 export function getEpisodeNo(fileName) {
-  for (const reg of EP_REGS) {
-    let match = reg.exec(fileName);
-    if (match && match.length > 0 && match.groups) {
-      return match.groups.episode;
-    }
+  const match = regExps.episode.exec(fileName);
+  if (match && match.groups && match.groups.episode) {
+    return pad(match.groups.episode, 2);
+  } else {
+    return undefined;
   }
-  throw new Error(`Could not find episode number in file: ${fileName}`);
 }
 
-/**
- *
- * @param {string[]} animes
- * @param {string} fileName
- * @returns {string}
- */
-export function findMatchedAnime(animes, fileName) {
-  const animesLowerCase = animes.map((anime) => anime.toLowerCase());
-  const fileNameLowerCase = fileName.toLowerCase();
-  const result = stringSimilarity.findBestMatch(
-    fileNameLowerCase,
-    animesLowerCase
-  );
-
-  const foundIndex = animesLowerCase.findIndex(
-    (anime) => anime === result.bestMatch.target
-  );
-  if (foundIndex !== -1) {
-    return animes[foundIndex];
+export function getSeasonNo(fileName) {
+  const match = regExps.season.exec(fileName);
+  if (match && match.groups && match.groups.season) {
+    return pad(match.groups.season, 2);
   }
+  return undefined;
 }
 
 function createAnidbFile(dir, anidbid, preview) {
