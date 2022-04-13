@@ -37,7 +37,7 @@ export function getSeasonNo(fileName) {
   return undefined;
 }
 
-function createAnidbFile(dir, anidbid, preview) {
+export function createAnidbFile(dir, anidbid, preview) {
   logger.info(
     `${preview ? "PREVIEW" : ""}Writing anidb.id file with id ${anidbid}`
   );

@@ -63,6 +63,30 @@ export function moveFile(source, destination) {
   });
 }
 
+export function writeFile(filePath, content) {
+  return new Promise((resolve, reject) => {
+    fs.writeFile(filePath, content, (err) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve();
+      }
+    });
+  });
+}
+
+export function readFile(filePath) {
+  return new Promise((resolve, reject) => {
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(data);
+      }
+    });
+  });
+}
+
 export function loadAndParseJson(filePath) {
   return new Promise((resolve, reject) => {
     fs.readFile(filePath, (err, data) => {
@@ -73,4 +97,17 @@ export function loadAndParseJson(filePath) {
       }
     });
   });
+}
+
+export async function loadConfig(appConfigFilePath) {
+  const appConfigExists = await fileExists(appConfigFilePath);
+  if (appConfigExists) {
+    return loadAndParseJson(appConfigFilePath);
+  } else {
+    throw new Error(`Config file not found: ${appConfigFilePath}`);
+  }
+}
+
+export async function updateConfig(appConfigFilePath, config) {
+  return writeFile(appConfigFilePath, JSON.stringify(config));
 }

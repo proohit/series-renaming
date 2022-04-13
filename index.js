@@ -1,29 +1,35 @@
 #!/usr/bin/env node
 
 import { watch } from "chokidar";
+import { checkAnidbDb } from "./anidb.js";
 import {
   buildFileName,
   createFolder,
   fileExists,
   getFileExtension,
-  loadAndParseJson,
   moveFile,
+  loadConfig,
 } from "./file-utils.js";
 import { logger } from "./logger.js";
-import { getEpisodeNo, getSeasonNo, isVideo } from "./media-utils.js";
-
+import {
+  createAnidbFile,
+  getEpisodeNo,
+  getSeasonNo,
+  isVideo,
+} from "./media-utils.js";
+const APP_CONFIG_FILE_PATH = "config.json";
+let appConfig = undefined;
 run();
 
 async function run() {
-  const { appConfigFile, aniConfigFile } = await loadConfig();
-  const { inputFolder, outputFolder } = appConfigFile;
-  const animes = aniConfigFile.anime.map((anime) => anime.name);
-  logger.info(`Loaded animes: ${animes}`);
-  logger.info(`Watching folder: ${inputFolder}`);
+  appConfig = await loadConfig(APP_CONFIG_FILE_PATH);
+  const { inputFolder } = appConfig;
+  await checkAnidbDb(APP_CONFIG_FILE_PATH, appConfig);
+  logger.info(`Watching folder: ${inputFolder}/*/**`);
   watch(`${inputFolder}/*/**`, {
     ignoreInitial: false,
     awaitWriteFinish: true,
-  }).on("add", (path) => handleFileAdded(path, outputFolder, animes));
+  }).on("add", (path) => handleFileAdded(path));
 }
 
 function getFileParts(fileName) {
@@ -33,7 +39,8 @@ function getFileParts(fileName) {
   return { episode, season, extension };
 }
 
-async function handleFileAdded(path, outputFolder, animes) {
+async function handleFileAdded(path) {
+  const outputFolder = appConfig.outputFolder;
   logger.debug(`File added: ${path}`);
   const splitPath = path.split("/");
   const fileName = splitPath[splitPath.length - 1];
@@ -61,30 +68,20 @@ async function handleFileAdded(path, outputFolder, animes) {
       }
       const newPath = `${newParent}/${newFileName}`;
       logger.info(`Moving ${path} to ${newPath}`);
-      await moveFile(path, newPath);
-      // createAnidbFile(dir, anidbid, preview);
+      // await moveFile(path, newPath);
+      const shouldReloadConfig = await checkAnidbDb(
+        APP_CONFIG_FILE_PATH,
+        appConfig
+      );
+      if (shouldReloadConfig) {
+        logger.info("Reloading config due to anidb download");
+        appConfig = await loadConfig(APP_CONFIG_FILE_PATH);
+      }
+      createAnidbFile(dir, anidbid, preview);
     } catch (e) {
       logger.error(e.message);
     }
   } else {
     logger.debug(`Ignoring, not a video`);
-  }
-}
-
-async function loadConfig() {
-  const appConfigFilePath = "config.json";
-  const appConfigExists = await fileExists(appConfigFilePath);
-  if (appConfigExists) {
-    const appConfigFile = await loadAndParseJson(appConfigFilePath);
-    const aniConfigFilePath = appConfigFile.aniConfigFile;
-    const aniConfigExists = await fileExists(aniConfigFilePath);
-    if (aniConfigExists) {
-      const aniConfigFile = await loadAndParseJson(aniConfigFilePath);
-      return { appConfigFile, aniConfigFile };
-    } else {
-      throw new Error(`Ani config file not found: ${aniConfigFilePath}`);
-    }
-  } else {
-    throw new Error(`Config file not found: ${appConfigFilePath}`);
   }
 }
