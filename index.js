@@ -1,15 +1,20 @@
 #!/usr/bin/env node
 
-import fs from "fs";
 import { watch } from "chokidar";
-import { buildFileName, getFileExtension, pad } from "./file-utils";
-import { getEpisodeNo, isVideo, findMatchedAnime } from "./media-utils";
-import { logger } from "./logger";
+import {
+  buildFileName,
+  getFileExtension,
+  pad,
+  fileExists,
+  loadAndParseJson,
+} from "./file-utils.js";
+import { getEpisodeNo, isVideo, findMatchedAnime } from "./media-utils.js";
+import { logger } from "./logger.js";
 
 run();
 
 async function run() {
-  const { appConfigFile, aniConfigFile } = loadConfig();
+  const { appConfigFile, aniConfigFile } = await loadConfig();
   const { inputFolder, outputFolder } = appConfigFile;
   const animes = aniConfigFile.anime.map((anime) => anime.name);
   logger.info(`Loaded animes: ${animes}`);
@@ -27,7 +32,11 @@ async function moveFile(path, outputFolder, animes) {
     try {
       const matchedAnimeName = findMatchedAnime(animes, fileName);
       const episodeRaw = getEpisodeNo(fileName);
-      const episode = pad(episodeRaw, 2);
+      let episode = undefined;
+      if (episodeRaw) {
+        // might be a series
+        episode = pad(episodeRaw, 2);
+      }
       const extension = getFileExtension(fileName);
       const newFileName = buildFileName(
         matchedAnimeName,
@@ -48,10 +57,20 @@ async function moveFile(path, outputFolder, animes) {
   }
 }
 
-function loadConfig() {
-  const appConfigFile = JSON.parse(fs.readFileSync("config.json"));
-  const aniConfigFile = JSON.parse(
-    fs.readFileSync(appConfigFile.aniConfigFile)
-  );
-  return { appConfigFile, aniConfigFile };
+async function loadConfig() {
+  const appConfigFilePath = "config.json";
+  const appConfigExists = await fileExists(appConfigFilePath);
+  if (appConfigExists) {
+    const appConfigFile = await loadAndParseJson(appConfigFilePath);
+    const aniConfigFilePath = appConfigFile.aniConfigFile;
+    const aniConfigExists = await fileExists(aniConfigFilePath);
+    if (aniConfigExists) {
+      const aniConfigFile = await loadAndParseJson(aniConfigFilePath);
+      return { appConfigFile, aniConfigFile };
+    } else {
+      throw new Error(`Ani config file not found: ${aniConfigFilePath}`);
+    }
+  } else {
+    throw new Error(`Config file not found: ${appConfigFilePath}`);
+  }
 }

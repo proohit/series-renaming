@@ -1,3 +1,4 @@
+import fs from "fs";
 const FILE_EXTENSIONS = [".mkv", ".avi", ".mp4"];
 const FILE_EXTENSIONS_REG = new RegExp(FILE_EXTENSIONS.join("|"));
 
@@ -24,4 +25,28 @@ export function getFileExtension(fileName) {
   if (match && match.length > 0) {
     return match[0];
   }
+}
+
+export function fileExists(filePath) {
+  return new Promise((resolve) => {
+    fs.access(filePath, fs.constants.F_OK, (err) => {
+      if (err) {
+        resolve(false);
+      } else {
+        resolve(true);
+      }
+    });
+  });
+}
+
+export function loadAndParseJson(filePath) {
+  return new Promise((resolve, reject) => {
+    fs.readFile(filePath, (err, data) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(JSON.parse(data));
+      }
+    });
+  });
 }
