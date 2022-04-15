@@ -12,12 +12,12 @@ export const logger = winston.createLogger({
       stream: process.stdout,
     }),
     new winston.transports.File({
-      filename: "debug.log",
+      filename: "/logs/debug.log",
       format: winston.format.json(),
       level: "debug",
     }),
     new winston.transports.File({
-      filename: "combined.log",
+      filename: "/loga/combined.log",
       format: winston.format.json(),
     }),
   ],
