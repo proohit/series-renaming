@@ -7,10 +7,11 @@ import {
   createFolder,
   fileExists,
   getFileExtension,
-  moveFile,
   loadConfig,
   copyFile,
   removeFile,
+  getSubDirs,
+  getFilesOfDir,
 } from "./file-utils.js";
 import { logger } from "./logger.js";
 import {
@@ -31,14 +32,29 @@ async function run() {
   watch(`${inputFolder}/*/**`, {
     ignoreInitial: false,
     awaitWriteFinish: true,
-  }).on("add", (path) => handleFileAdded(path));
+  }).on("add", () => moveAllFiles());
 }
 
 function getFileParts(fileName) {
   const episode = getEpisodeNo(fileName);
-  const season = getSeasonNo(fileName);
+  let season = undefined;
+  if (!appConfig.disableSeasons) {
+    season = getSeasonNo(fileName);
+  }
   const extension = getFileExtension(fileName);
   return { episode, season, extension };
+}
+
+async function moveAllFiles() {
+  const { inputFolder } = appConfig;
+  const subDirs = await getSubDirs(inputFolder);
+  for (const subDir of subDirs) {
+    const files = await getFilesOfDir(subDir);
+    for (const file of files) {
+      logger.info(`Attempting to move ${file} from ${subDir}`);
+      await handleFileAdded(file);
+    }
+  }
 }
 
 async function handleFileAdded(path) {
