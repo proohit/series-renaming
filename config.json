@@ -1,5 +1,6 @@
 {
-  "inputFolder": "",
-  "outputFolder": "",
+  "inputFolder": "/videos",
+  "outputFolder": "/output",
+  "disableSeasons": false,
   "latestAnidbDownloadTime": 0
 }
