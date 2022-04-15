@@ -6,4 +6,4 @@ ADD ./ ./
 # Install dependencies
 RUN npm install
 
-CMD npm start -- ..config-file=./config.json
+CMD node ./index.js
