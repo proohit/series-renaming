@@ -9,6 +9,8 @@ import {
   getFileExtension,
   moveFile,
   loadConfig,
+  copyFile,
+  removeFile,
 } from "./file-utils.js";
 import { logger } from "./logger.js";
 import {
@@ -17,7 +19,7 @@ import {
   getSeasonNo,
   isVideo,
 } from "./media-utils.js";
-const APP_CONFIG_FILE_PATH = "config.json";
+const APP_CONFIG_FILE_PATH = "/config/config.json";
 let appConfig = undefined;
 run();
 
@@ -68,7 +70,8 @@ async function handleFileAdded(path) {
       }
       const newPath = `${newParent}/${newFileName}`;
       logger.info(`Moving ${path} to ${newPath}`);
-      // await moveFile(path, newPath);
+      await copyFile(path, newPath);
+      await removeFile(path);
       const shouldReloadConfig = await checkAnidbDb(
         APP_CONFIG_FILE_PATH,
         appConfig
