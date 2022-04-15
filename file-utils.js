@@ -135,3 +135,59 @@ export async function loadConfig(appConfigFilePath) {
 export async function updateConfig(appConfigFilePath, config) {
   return writeFile(appConfigFilePath, JSON.stringify(config));
 }
+
+export async function getSubDirs(dirPath) {
+  const subFiles = await new Promise((resolve, reject) => {
+    fs.readdir(dirPath, (err, files) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(files);
+      }
+    });
+  });
+  const subDirs = await Promise.all(
+    subFiles.map((file) => {
+      return new Promise((resolve, reject) => {
+        const filePath = `${dirPath}/${file}`;
+        fs.stat(filePath, (err, stats) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve({ path: filePath, stats });
+          }
+        });
+      });
+    })
+  );
+  return subDirs
+    .filter(({ stats }) => stats.isDirectory())
+    .map(({ path }) => path);
+}
+
+export async function getFilesOfDir(dirPath) {
+  const files = await new Promise((resolve, reject) => {
+    fs.readdir(dirPath, (err, filesInDir) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(filesInDir);
+      }
+    });
+  });
+  const subDirs = await Promise.all(
+    files.map((file) => {
+      return new Promise((resolve, reject) => {
+        const filePath = `${dirPath}/${file}`;
+        fs.stat(filePath, (err, stats) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve({ path: filePath, stats });
+          }
+        });
+      });
+    })
+  );
+  return subDirs.filter(({ stats }) => stats.isFile()).map(({ path }) => path);
+}
