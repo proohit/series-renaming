@@ -7,13 +7,13 @@ import {
   createFolder,
   fileExists,
   getFileExtension,
-  loadConfig,
   copyFile,
   removeFile,
   getSubDirs,
   getFilesOfDir,
 } from "./file-utils.js";
 import { logger } from "./logger.js";
+import { loadConfig } from "./config.js";
 import {
   createAnidbFile,
   getEpisodeNo,

@@ -1,7 +1,8 @@
 import gunzip from "gunzip-maybe";
 import fetch from "node-fetch";
 import xml from "xml2js";
-import { fileExists, readFile, updateConfig, writeFile } from "./file-utils.js";
+import { fileExists, readFile, writeFile } from "./file-utils.js";
+import { updateConfig } from "./config.js";
 import { logger } from "./logger.js";
 import { findBestMatch } from "string-similarity";
 const ANIME_TITLES_FILE_NAME = "anime-titles.xml";

@@ -123,19 +123,6 @@ export function loadAndParseJson(filePath) {
   });
 }
 
-export async function loadConfig(appConfigFilePath) {
-  const appConfigExists = await fileExists(appConfigFilePath);
-  if (appConfigExists) {
-    return loadAndParseJson(appConfigFilePath);
-  } else {
-    throw new Error(`Config file not found: ${appConfigFilePath}`);
-  }
-}
-
-export async function updateConfig(appConfigFilePath, config) {
-  return writeFile(appConfigFilePath, JSON.stringify(config));
-}
-
 export async function getSubDirs(dirPath) {
   const subFiles = await new Promise((resolve, reject) => {
     fs.readdir(dirPath, (err, files) => {
