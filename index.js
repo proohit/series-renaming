@@ -20,7 +20,11 @@ import {
   getSeasonNo,
   isVideo,
 } from "./media-utils.js";
-const APP_CONFIG_FILE_PATH = "/config/config.json";
+
+const APP_CONFIG_FILE_PATH = process.argv
+  .find((arg) => arg.includes("config-file"))
+  ?.split("=")[1];
+
 let appConfig = undefined;
 run();
 

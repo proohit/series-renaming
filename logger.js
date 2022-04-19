@@ -1,5 +1,9 @@
 import winston from "winston";
 
+const logsFolder = process.argv
+  .find((arg) => arg.includes("logs-folder"))
+  ?.split("=")[1];
+
 export const logger = winston.createLogger({
   level: "info",
   defaultMeta: { timestamp: new Date().toISOString() },
@@ -12,12 +16,12 @@ export const logger = winston.createLogger({
       stream: process.stdout,
     }),
     new winston.transports.File({
-      filename: "/logs/debug.log",
+      filename: `${logsFolder}/debug.log`,
       format: winston.format.json(),
       level: "debug",
     }),
     new winston.transports.File({
-      filename: "/loga/combined.log",
+      filename: `${logsFolder}/combined.log`,
       format: winston.format.json(),
     }),
   ],

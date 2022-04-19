@@ -6,4 +6,4 @@ ADD ./ ./
 # Install dependencies
 RUN npm install
 
-CMD node ./index.js
+CMD node ./index.js --config-file=/config/config.json --log-folder=/logs
