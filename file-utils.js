@@ -2,7 +2,7 @@ import fs from "fs";
 const FILE_EXTENSIONS = [".mkv", ".avi", ".mp4"];
 const FILE_EXTENSIONS_REG = new RegExp(FILE_EXTENSIONS.join("|"));
 
-export function buildFileName(name, season, episode, fileEnding) {
+export function buildEpisodeFileName(name, season, episode, fileEnding) {
   let fileName = `${name} `;
   if (season && season !== 0) {
     fileName = `${fileName}S${season}`;
@@ -12,6 +12,10 @@ export function buildFileName(name, season, episode, fileEnding) {
   }
   fileName = `${fileName}${fileEnding}`;
   return fileName;
+}
+
+export function buildMovieFileName(name, fileEnding) {
+  return `${name}${fileEnding}`;
 }
 
 export function pad(n, width, z) {

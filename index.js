@@ -3,7 +3,7 @@
 import { watch } from "chokidar";
 import { checkAnidbDb, searchAnime } from "./anidb.js";
 import {
-  buildFileName,
+  buildEpisodeFileName,
   createFolder,
   fileExists,
   getFileExtension,
@@ -11,13 +11,16 @@ import {
   removeFile,
   getSubDirs,
   getFilesOfDir,
+  buildMovieFileName,
 } from "./file-utils.js";
 import { logger } from "./logger.js";
 import { loadConfig } from "./config.js";
 import {
   createAnidbFile,
   getEpisodeNo,
+  getMovieOfFolder,
   getSeasonNo,
+  isFolderAnimeMovie,
   isVideo,
 } from "./media-utils.js";
 
@@ -55,15 +58,40 @@ async function moveAllFiles() {
   const { inputFolder } = appConfig;
   const subDirs = await getSubDirs(inputFolder);
   for (const subDir of subDirs) {
-    const files = await getFilesOfDir(subDir);
-    for (const file of files) {
-      logger.info(`Attempting to move ${file} from ${subDir}`);
-      await handleFileAdded(file);
+    const subDirName = subDir.split("/")[subDir.split("/").length - 1];
+    if (isFolderAnimeMovie(subDirName)) {
+      const movieFile = await getMovieOfFolder(subDir);
+      if (movieFile) {
+        logger.info(
+          `Attempting to move movie file: ${movieFile} from ${subDir}`
+        );
+        await moveMovieFile(subDir, movieFile);
+      }
+    } else {
+      const files = await getFilesOfDir(subDir);
+      for (const file of files) {
+        logger.info(`Attempting to move ${file} from ${subDir}`);
+        await moveEpisodeFile(file);
+      }
     }
   }
 }
 
-async function handleFileAdded(path) {
+async function moveMovieFile(subDir, movieFile) {
+  const splitPath = subDir.split("/");
+  const movieName = splitPath[splitPath.length - 1]
+    .replace("ANIME-MOVIE", "")
+    .trim();
+  if (isVideo(movieFile)) {
+    const fileParts = getFileParts(movieFile);
+    const newFileName = buildMovieFileName(movieName, fileParts.extension);
+    await moveFileWithPreparations(movieName, newFileName, movieFile);
+  } else {
+    logger.debug(`Ignoring, not a video`);
+  }
+}
+
+async function moveEpisodeFile(path) {
   const outputFolder = appConfig.outputFolder;
   logger.debug(`File added: ${path}`);
   const splitPath = path.split("/");
@@ -80,34 +108,42 @@ async function handleFileAdded(path) {
         // episode not found, might be a movie or episode could not be found
         throw new Error(`Episode not found in file name: ${fileName}`);
       }
-      const newFileName = buildFileName(
+      const newFileName = buildEpisodeFileName(
         matchedAnimeName,
         season,
         episode,
         extension
       );
-      const newParent = `${outputFolder}/${matchedAnimeName}`;
-      if (!(await fileExists(newParent))) {
-        await createFolder(newParent);
-      }
-      const newPath = `${newParent}/${newFileName}`;
-      logger.info(`Moving ${path} to ${newPath}`);
-      await copyFile(path, newPath);
-      await removeFile(path);
-      const shouldReloadConfig = await checkAnidbDb(
-        APP_CONFIG_FILE_PATH,
-        appConfig
-      );
-      if (shouldReloadConfig) {
-        logger.info("Reloading config due to anidb download");
-        appConfig = await loadConfig(APP_CONFIG_FILE_PATH);
-      }
-      const { aid } = searchAnime(matchedAnimeName);
-      await createAnidbFile(newParent, aid);
+      await moveFileWithPreparations(matchedAnimeName, newFileName, path);
     } catch (e) {
       logger.error(e.message);
     }
   } else {
     logger.debug(`Ignoring, not a video`);
   }
+}
+async function moveFileWithPreparations(
+  matchedAnimeName,
+  newFileName,
+  sourcePath
+) {
+  const outputFolder = appConfig.outputFolder;
+  const newParent = `${outputFolder}/${matchedAnimeName}`;
+  if (!(await fileExists(newParent))) {
+    await createFolder(newParent);
+  }
+  const newPath = `${newParent}/${newFileName}`;
+  logger.info(`Moving ${sourcePath} to ${newPath}`);
+  await copyFile(sourcePath, newPath);
+  await removeFile(sourcePath);
+  const shouldReloadConfig = await checkAnidbDb(
+    APP_CONFIG_FILE_PATH,
+    appConfig
+  );
+  if (shouldReloadConfig) {
+    logger.info("Reloading config due to anidb download");
+    appConfig = await loadConfig(APP_CONFIG_FILE_PATH);
+  }
+  const { aid } = searchAnime(matchedAnimeName);
+  await createAnidbFile(newParent, aid);
 }

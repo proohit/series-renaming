@@ -1,4 +1,4 @@
-import { pad, writeFile } from "./file-utils.js";
+import { getFilesOfDir, pad, writeFile } from "./file-utils.js";
 import { logger } from "./logger.js";
 
 const SEPARATOR = "\\.|\\_";
@@ -28,6 +28,15 @@ const regExps = {
 
 export function isVideo(fileName) {
   return regExps.extension.test(fileName);
+}
+
+export function isFolderAnimeMovie(fileName) {
+  return fileName.includes("ANIME-MOVIE");
+}
+
+export async function getMovieOfFolder(fileName) {
+  const files = await getFilesOfDir(fileName);
+  return files.find((file) => isVideo(file));
 }
 
 export function getEpisodeNo(fileName) {
