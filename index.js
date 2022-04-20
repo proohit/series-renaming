@@ -85,7 +85,13 @@ async function moveMovieFile(subDir, movieFile) {
   if (isVideo(movieFile)) {
     const fileParts = getFileParts(movieFile);
     const newFileName = buildMovieFileName(movieName, fileParts.extension);
-    await moveFileWithPreparations(movieName, newFileName, movieFile);
+    const outputFolder = appConfig.outputFolderMovies;
+    await moveFileWithPreparations(
+      outputFolder,
+      movieName,
+      newFileName,
+      movieFile
+    );
   } else {
     logger.debug(`Ignoring, not a video`);
   }
@@ -114,7 +120,13 @@ async function moveEpisodeFile(path) {
         episode,
         extension
       );
-      await moveFileWithPreparations(matchedAnimeName, newFileName, path);
+      const outputFolder = appConfig.outputFolder;
+      await moveFileWithPreparations(
+        outputFolder,
+        matchedAnimeName,
+        newFileName,
+        path
+      );
     } catch (e) {
       logger.error(e.message);
     }
@@ -123,11 +135,11 @@ async function moveEpisodeFile(path) {
   }
 }
 async function moveFileWithPreparations(
+  outputFolder,
   matchedAnimeName,
   newFileName,
   sourcePath
 ) {
-  const outputFolder = appConfig.outputFolder;
   const newParent = `${outputFolder}/${matchedAnimeName}`;
   if (!(await fileExists(newParent))) {
     await createFolder(newParent);

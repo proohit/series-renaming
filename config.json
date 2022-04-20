@@ -1,6 +1,7 @@
 {
   "inputFolder": "./sample-files",
   "outputFolder": "./output",
+  "outputFolderMovies": "./output",
   "disableSeasons": false,
   "latestAnidbDownloadTime": 0
 }
