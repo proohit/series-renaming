@@ -21,6 +21,8 @@ import {
   isVideo,
 } from "./media-utils.js";
 
+import debounce from "lodash/debounce.js";
+
 const APP_CONFIG_FILE_PATH = process.argv
   .find((arg) => arg.includes("config-file"))
   ?.split("=")[1];
@@ -36,7 +38,7 @@ async function run() {
   watch(`${inputFolder}/*/**`, {
     ignoreInitial: false,
     awaitWriteFinish: true,
-  }).on("add", () => moveAllFiles());
+  }).on("add", debounce(moveAllFiles, 3000));
 }
 
 function getFileParts(fileName) {

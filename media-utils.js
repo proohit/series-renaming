@@ -3,16 +3,27 @@ import { logger } from "./logger.js";
 
 const SEPARATOR = "\\.|\\_";
 
+const EPISODE_NUMBER = "(?<episode>([0-9]{1,2}))";
+
 const regExps = {
-  season: RegExp(
-    `([sS](eason|taffel)?)[${SEPARATOR}]?(?<season>([0-9]{1,2}))`,
-    "g"
-  ),
-  episode: RegExp(
-    `([fF]olge|[Ee][Pp](isode)?|e|E|f|F)[${SEPARATOR}]?(?<episode>([0-9]{1,2}))`,
-    "g"
-  ),
-  extension: RegExp(`\\.(?<extension>((avi|mkv|mp4)))`),
+  get season() {
+    return RegExp(
+      `([sS](eason|taffel)?)[${SEPARATOR}]?(?<season>([0-9]{1,2}))`,
+      "g"
+    );
+  },
+  get episode() {
+    return RegExp(
+      `([fF]olge|[Ee][Pp](isode)?|e|E|f|F)[${SEPARATOR}]?${EPISODE_NUMBER}`,
+      "g"
+    );
+  },
+  get episodeFree() {
+    return RegExp(`[${SEPARATOR}]${EPISODE_NUMBER}[${SEPARATOR}]`, "g");
+  },
+  get extension() {
+    return RegExp(`\\.(?<extension>((avi|mkv|mp4)))`);
+  },
 };
 
 export function isVideo(fileName) {
@@ -23,9 +34,14 @@ export function getEpisodeNo(fileName) {
   const match = regExps.episode.exec(fileName);
   if (match && match.groups && match.groups.episode) {
     return pad(match.groups.episode, 2);
-  } else {
-    return undefined;
   }
+
+  const matchFree = regExps.episodeFree.exec(fileName);
+  if (matchFree && matchFree.groups && matchFree.groups.episode) {
+    return pad(matchFree.groups.episode, 2);
+  }
+
+  return undefined;
 }
 
 export function getSeasonNo(fileName) {
