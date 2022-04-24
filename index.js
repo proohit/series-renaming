@@ -32,6 +32,7 @@ const APP_CONFIG_FILE_PATH = process.argv
 
 let appConfig = undefined;
 run();
+const fileJobStatus = new Map();
 
 async function run() {
   appConfig = await loadConfig(APP_CONFIG_FILE_PATH);
@@ -98,7 +99,6 @@ async function moveMovieFile(subDir, movieFile) {
 }
 
 async function moveEpisodeFile(path) {
-  const outputFolder = appConfig.outputFolder;
   logger.debug(`File added: ${path}`);
   const splitPath = path.split("/");
   const fileName = splitPath[splitPath.length - 1];
@@ -106,7 +106,7 @@ async function moveEpisodeFile(path) {
   if (splitPath.length > 1) {
     parentFolderName = splitPath[splitPath.length - 2];
   }
-  if (isVideo(fileName)) {
+  if (isVideo(fileName) && !fileJobStatus.has(path)) {
     try {
       const matchedAnimeName = parentFolderName;
       const { episode, season, extension } = getFileParts(fileName);
@@ -131,7 +131,7 @@ async function moveEpisodeFile(path) {
       logger.error(e.message);
     }
   } else {
-    logger.debug(`Ignoring, not a video`);
+    logger.debug(`Ignoring, not a video or currently in progress`);
   }
 }
 async function moveFileWithPreparations(
@@ -146,8 +146,10 @@ async function moveFileWithPreparations(
   }
   const newPath = `${newParent}/${newFileName}`;
   logger.info(`Moving ${sourcePath} to ${newPath}`);
+  fileJobStatus.set(sourcePath, true);
   await copyFile(sourcePath, newPath);
   await removeFile(sourcePath);
+  fileJobStatus.delete(sourcePath);
   const shouldReloadConfig = await checkAnidbDb(
     APP_CONFIG_FILE_PATH,
     appConfig
