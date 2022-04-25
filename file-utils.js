@@ -1,4 +1,5 @@
 import fs from "fs";
+import { isVideo } from "./media-utils.js";
 const FILE_EXTENSIONS = [".mkv", ".avi", ".mp4"];
 const FILE_EXTENSIONS_REG = new RegExp(FILE_EXTENSIONS.join("|"));
 
@@ -68,27 +69,11 @@ export function moveFile(source, destination) {
 }
 
 export function copyFile(source, destination) {
-  return new Promise((resolve, reject) => {
-    fs.copyFile(source, destination, (err) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve();
-      }
-    });
-  });
+  fs.copyFileSync(source, destination, fs.constants.COPYFILE_FICLONE);
 }
 
 export function removeFile(filePath) {
-  return new Promise((resolve, reject) => {
-    fs.unlink(filePath, (err) => {
-      if (err) {
-        reject(err);
-      } else {
-        resolve();
-      }
-    });
-  });
+  fs.unlinkSync(filePath);
 }
 
 export function writeFile(filePath, content) {
@@ -181,4 +166,19 @@ export async function getFilesOfDir(dirPath) {
     })
   );
   return subDirs.filter(({ stats }) => stats.isFile()).map(({ path }) => path);
+}
+
+export async function isFolderStillLoading(path) {
+  const filesOfPath = await getFilesOfDir(path);
+  return filesOfPath.some((file) => !isVideo(getFileNameOfPath(file)));
+}
+
+export function getFileNameOfPath(path) {
+  const splitPath = path.split("/");
+  return splitPath[splitPath.length - 1];
+}
+
+export function getParentFolderName(path) {
+  const splitPath = path.split("/");
+  return splitPath[splitPath.length - 2];
 }

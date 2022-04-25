@@ -27,7 +27,11 @@ const regExps = {
 };
 
 export function isVideo(fileName) {
-  return regExps.extension.test(fileName);
+  const match = regExps.extension.exec(fileName);
+  if (match && match.length > 0) {
+    return true;
+  }
+  return false;
 }
 
 export function isFolderAnimeMovie(fileName) {
